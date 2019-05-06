@@ -16,32 +16,39 @@ import {
   del,
   requestBody,
 } from '@loopback/rest';
-import {Client} from '../models';
-import {ClientRepository} from '../repositories';
+import { Client } from '../models';
+import { ClientRepository } from '../repositories';
 
 export class ClientController {
   constructor(
     @repository(ClientRepository)
-    public clientRepository : ClientRepository,
-  ) {}
+    public clientRepository: ClientRepository,
+  ) { }
 
   @post('/clients', {
     responses: {
       '200': {
         description: 'Client model instance',
-        content: {'application/json': {schema: {'x-ts-type': Client}}},
+        content: { 'application/json': { schema: { 'x-ts-type': Client } } },
       },
     },
   })
   async create(@requestBody() client: Client): Promise<Client> {
-    return await this.clientRepository.create(client);
+    const createdClient = await this.clientRepository.create(client);
+
+    delete createdClient.password
+    delete createdClient.archived_date
+    delete createdClient.email_verified
+    delete createdClient.verification_token
+
+    return createdClient
   }
 
   @get('/clients/count', {
     responses: {
       '200': {
         description: 'Client model count',
-        content: {'application/json': {schema: CountSchema}},
+        content: { 'application/json': { schema: CountSchema } },
       },
     },
   })
@@ -57,7 +64,7 @@ export class ClientController {
         description: 'Array of Client model instances',
         content: {
           'application/json': {
-            schema: {type: 'array', items: {'x-ts-type': Client}},
+            schema: { type: 'array', items: { 'x-ts-type': Client } },
           },
         },
       },
@@ -66,14 +73,23 @@ export class ClientController {
   async find(
     @param.query.object('filter', getFilterSchemaFor(Client)) filter?: Filter,
   ): Promise<Client[]> {
-    return await this.clientRepository.find(filter);
+
+    const fields = {
+      password: false,
+      archived_date: false,
+      email_verified: false,
+      verification_token: false,
+    }
+
+    const changedFilter: Filter = { ...filter, fields };
+    return await this.clientRepository.find(changedFilter);
   }
 
   @patch('/clients', {
     responses: {
       '200': {
         description: 'Client PATCH success count',
-        content: {'application/json': {schema: CountSchema}},
+        content: { 'application/json': { schema: CountSchema } },
       },
     },
   })
@@ -88,7 +104,7 @@ export class ClientController {
     responses: {
       '200': {
         description: 'Client model instance',
-        content: {'application/json': {schema: {'x-ts-type': Client}}},
+        content: { 'application/json': { schema: { 'x-ts-type': Client } } },
       },
     },
   })
