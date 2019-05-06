@@ -24,3 +24,4 @@ export * from './user.controller';
 export * from './utility.controller';
 export * from './utility-type.controller';
 export * from './zone.controller';
+export * from './login.controller';

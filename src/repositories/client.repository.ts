@@ -3,6 +3,7 @@ import { generate } from 'shortid';
 import { inject } from '@loopback/core';
 import { HttpErrors } from '@loopback/rest';
 import { compare, genSalt, hash } from 'bcryptjs';
+import { sign, verify } from 'jsonwebtoken'
 
 import {
   DefaultCrudRepository,
@@ -13,14 +14,42 @@ import {
 import { Client } from '../models';
 import { MysqlDataSource } from '../datasources';
 
+export type Credentials = {
+  email: string;
+  password: string;
+};
+
 export class ClientRepository extends DefaultCrudRepository<
   Client,
   typeof Client.prototype.id
   > {
+
+  secret: string;
+
   constructor(
     @inject('datasources.mysql') dataSource: MysqlDataSource,
   ) {
     super(Client, dataSource);
+    this.secret = process.env.JWT_SECRET || '#MHFR@0192'
+  }
+
+  /**
+   * Create client
+   *
+   * @param { Client } client - The client.
+   * @param { Options } options - The client creation options.
+   * @return { Client } The created client.
+   */
+  async create(client: DataObject<Client>, options?: Options): Promise<Client> {
+    if (!client.email || !client.password) {
+      throw new HttpErrors.UnprocessableEntity('invalid email or password');
+    }
+
+    this.validateEmail(client.email)
+    client.password = await this.encryptPassword(client.password)
+    client.verification_token = await generate()
+
+    return await super.create(client, options);
   }
 
   /**
@@ -48,6 +77,12 @@ export class ClientRepository extends DefaultCrudRepository<
     return await compare(providedPassword, storedPass);
   }
 
+  /**
+   * Validate email address.
+   *
+   * @param { string } email - Email address.
+   * @return
+   */
   validateEmail(email: string): void {
     if (!isemail.validate(email)) {
       throw new HttpErrors.UnprocessableEntity('invalid email');
@@ -55,21 +90,23 @@ export class ClientRepository extends DefaultCrudRepository<
   }
 
   /**
-   * Create client
+   * Decodes the user's information from a valid JWT access token.
+   * Then generate a `UserProfile` instance as the returned user.
    *
-   * @param { Client } client - The client.
-   * @param { Options } options - The client creation options.
-   * @return { Client } The created client.
+   * @param token A JWT access token.
    */
-  async create(client: DataObject<Client>, options?: Options): Promise<Client> {
-    if (!client.email || !client.password) {
-      throw new HttpErrors.UnprocessableEntity('invalid email or password');
+  async decodeAccessToken(token: string): Promise<string | object> {
+    return await verify(token, this.secret);
+  }
+
+  async generateClientToken(client: Client): Promise<string> {
+    const payload = {
+      id: client.id,
+      username: client.username,
+      email: client.email
     }
 
-    this.validateEmail(client.email)
-    client.password = await this.encryptPassword(client.password)
-    client.verification_token = await generate()
-
-    return await super.create(client, options);
+    const time = { expiresIn: 60 * 60 }
+    return await sign(payload, this.secret, time)
   }
 }
