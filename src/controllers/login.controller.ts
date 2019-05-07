@@ -1,17 +1,11 @@
-import {post, requestBody} from '@loopback/rest';
-import {Credentials, UserRepository} from '../repositories';
-import {validateCredentials, JWTAuthenticationService} from '../services';
-import {repository} from '@loopback/repository';
-import {inject} from '@loopback/core';
-import {JWTBindings} from '../keys';
+import { post, requestBody } from '@loopback/rest';
+import { Credentials, ClientRepository } from '../repositories';
+import { repository } from '@loopback/repository';
 
 export class LoginController {
   constructor(
-    @repository(UserRepository)
-    public userRepository: UserRepository,
-    @inject(JWTBindings.SERVICE)
-    public jwtAuthenticationService: JWTAuthenticationService,
-  ) {}
+    @repository(ClientRepository) public clientRepository: ClientRepository,
+  ) { }
 
   @post('login', {
     responses: {
@@ -34,11 +28,8 @@ export class LoginController {
   })
   async login(
     @requestBody() credentials: Credentials,
-  ): Promise<{token: string}> {
-    validateCredentials(credentials);
-    const token = await this.jwtAuthenticationService.getAccessTokenForUser(
-      credentials,
-    );
-    return {token};
+  ): Promise<{ token: string }> {
+    const token = await this.clientRepository.generateClientToken(credentials);
+    return { token };
   }
 }

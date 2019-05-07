@@ -5,6 +5,7 @@ import {
   repository,
   Where,
 } from '@loopback/repository';
+
 import {
   post,
   param,
@@ -16,13 +17,22 @@ import {
   del,
   requestBody,
 } from '@loopback/rest';
+
+import {
+  authenticate,
+  UserProfile,
+  AuthenticationBindings,
+} from '@loopback/authentication';
+
 import { Client } from '../models';
 import { ClientRepository } from '../repositories';
+import { inject } from '@loopback/core';
 
 export class ClientController {
   constructor(
     @repository(ClientRepository)
     public clientRepository: ClientRepository,
+    @inject(AuthenticationBindings.CURRENT_USER) private currentUser: UserProfile,
   ) { }
 
   @post('/clients', {
@@ -70,6 +80,7 @@ export class ClientController {
       },
     },
   })
+  @authenticate('jwt')
   async find(
     @param.query.object('filter', getFilterSchemaFor(Client)) filter?: Filter,
   ): Promise<Client[]> {

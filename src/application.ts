@@ -15,14 +15,12 @@ import {
   AuthenticationComponent,
 } from '@loopback/authentication';
 
-import { JWTBindings, PasswordHasherBindings } from './keys';
+import { JWTBindings } from './keys';
 
 import {
   AuthenticateActionProvider,
   StrategyResolverProvider,
 } from './providers';
-
-import { Hasher, JWTAuthenticationService, JWT_SECRET } from './services';
 
 import { JWTStrategy } from './strategies';
 
@@ -43,12 +41,6 @@ export class StrongLoopApplication extends BootMixin(
 
     // Bind JWT authentication strategy related elements
     this.bind(JWTBindings.STRATEGY).toClass(JWTStrategy);
-    this.bind(JWTBindings.SECRET).to(JWT_SECRET);
-    this.bind(JWTBindings.SERVICE).toClass(JWTAuthenticationService);
-
-    // Bind bcrypt hash services
-    this.bind(PasswordHasherBindings.ROUNDS).to(10);
-    this.bind(PasswordHasherBindings.PASSWORD_HASHER).toClass(Hasher);
 
     // Set up the custom sequence
     this.sequence(MySequence);

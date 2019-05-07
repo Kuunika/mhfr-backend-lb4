@@ -13,6 +13,7 @@ import {
 
 import { Client } from '../models';
 import { MysqlDataSource } from '../datasources';
+import { UserProfile } from '@loopback/authentication';
 
 export type Credentials = {
   email: string;
@@ -95,15 +96,37 @@ export class ClientRepository extends DefaultCrudRepository<
    *
    * @param token A JWT access token.
    */
-  async decodeAccessToken(token: string): Promise<string | object> {
-    return await verify(token, this.secret);
+  async decodeAccessToken(token: string): Promise<UserProfile> {
+    const decoded = await verify(token, this.secret);
+    if (typeof decoded === 'object') {
+      const decodedUser: UserProfile = {
+        id: "" + 1, // TODO: this is a hack. id: decoded.id not working
+        ...decoded
+      }
+      return decodedUser;
+    }
+    throw new Error('Invalid payload')
   }
 
-  async generateClientToken(client: Client): Promise<string> {
+  async generateClientToken(credentials: Credentials): Promise<string> {
+    const { email, password } = credentials
+
+    this.validateEmail(email)
+
+    const user = await this.findOne({ where: { email } });
+    if (!user) {
+      throw new HttpErrors['NotFound'](`User with email ${email} not found.`);
+    }
+
+    const passwordMatched = await this.isValidPassword(password, user.password);
+    if (!passwordMatched) {
+      throw new HttpErrors.Unauthorized('The credentials are not correct.');
+    }
+
     const payload = {
-      id: client.id,
-      username: client.username,
-      email: client.email
+      id: user.id,
+      username: user.username,
+      email: user.email
     }
 
     const time = { expiresIn: 60 * 60 }

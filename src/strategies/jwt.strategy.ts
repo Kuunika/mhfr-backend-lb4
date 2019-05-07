@@ -1,35 +1,30 @@
-import {JWTBindings} from '../keys';
-import {Request, HttpErrors} from '@loopback/rest';
-import {UserProfile} from '@loopback/authentication';
-import {AuthenticationStrategy} from './authentication.strategy';
-import {inject} from '@loopback/core';
-import {JWTAuthenticationService} from '../services/JWT.service';
+import { Request, HttpErrors } from '@loopback/rest';
+import { UserProfile } from '@loopback/authentication';
+import { AuthenticationStrategy } from './authentication.strategy';
+import { repository } from '@loopback/repository';
+import { ClientRepository } from '../repositories';
 
 export class JWTStrategy implements AuthenticationStrategy {
   constructor(
-    @inject(JWTBindings.SERVICE)
-    public jwt_authentication_service: JWTAuthenticationService,
-    @inject(JWTBindings.SECRET)
-    public jwt_secret: string,
-  ) {}
+    @repository(ClientRepository) public clientRepository: ClientRepository,
+  ) { }
+
   async authenticate(request: Request): Promise<UserProfile | undefined> {
     let token = request.query.access_token || request.headers['authorization'];
-    if (!token) throw new HttpErrors.Unauthorized('No access token found!');
+
+    if (!token) {
+      throw new HttpErrors.Unauthorized('No access token found!');
+    }
 
     if (token.startsWith('Bearer ')) {
       token = token.slice(7, token.length);
     }
 
     try {
-      const user = await this.jwt_authentication_service.decodeAccessToken(
-        token,
-      );
+      const user = await this.clientRepository.decodeAccessToken(token);
       return user;
     } catch (err) {
-      Object.assign(err, {
-        code: 'INVALID_ACCESS_TOKEN',
-        statusCode: 401,
-      });
+      Object.assign(err, { code: 'INVALID_ACCESS_TOKEN', statusCode: 401, });
       throw err;
     }
   }
