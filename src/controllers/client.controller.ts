@@ -44,14 +44,7 @@ export class ClientController {
     },
   })
   async create(@requestBody() client: Client): Promise<Client> {
-    const createdClient = await this.clientRepository.create(client);
-
-    delete createdClient.password
-    delete createdClient.archived_date
-    delete createdClient.email_verified
-    delete createdClient.verification_token
-
-    return createdClient
+    return await this.clientRepository.create(client);
   }
 
   @get('/clients/count', {
@@ -84,16 +77,7 @@ export class ClientController {
   async find(
     @param.query.object('filter', getFilterSchemaFor(Client)) filter?: Filter,
   ): Promise<Client[]> {
-
-    const fields = {
-      password: false,
-      archived_date: false,
-      email_verified: false,
-      verification_token: false,
-    }
-
-    const changedFilter: Filter = { ...filter, fields };
-    return await this.clientRepository.find(changedFilter);
+    return await this.clientRepository.find(filter);
   }
 
   @patch('/clients', {
