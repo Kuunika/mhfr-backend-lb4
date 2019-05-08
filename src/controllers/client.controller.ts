@@ -5,6 +5,7 @@ import {
   repository,
   Where,
 } from '@loopback/repository';
+
 import {
   post,
   param,
@@ -16,20 +17,29 @@ import {
   del,
   requestBody,
 } from '@loopback/rest';
-import {Client} from '../models';
-import {ClientRepository} from '../repositories';
+
+import {
+  authenticate,
+  UserProfile,
+  AuthenticationBindings,
+} from '@loopback/authentication';
+
+import { Client } from '../models';
+import { ClientRepository } from '../repositories';
+import { inject } from '@loopback/core';
 
 export class ClientController {
   constructor(
     @repository(ClientRepository)
-    public clientRepository : ClientRepository,
-  ) {}
+    public clientRepository: ClientRepository,
+    @inject(AuthenticationBindings.CURRENT_USER) private currentUser: UserProfile,
+  ) { }
 
   @post('/clients', {
     responses: {
       '200': {
         description: 'Client model instance',
-        content: {'application/json': {schema: {'x-ts-type': Client}}},
+        content: { 'application/json': { schema: { 'x-ts-type': Client } } },
       },
     },
   })
@@ -41,7 +51,7 @@ export class ClientController {
     responses: {
       '200': {
         description: 'Client model count',
-        content: {'application/json': {schema: CountSchema}},
+        content: { 'application/json': { schema: CountSchema } },
       },
     },
   })
@@ -57,12 +67,13 @@ export class ClientController {
         description: 'Array of Client model instances',
         content: {
           'application/json': {
-            schema: {type: 'array', items: {'x-ts-type': Client}},
+            schema: { type: 'array', items: { 'x-ts-type': Client } },
           },
         },
       },
     },
   })
+  @authenticate('jwt')
   async find(
     @param.query.object('filter', getFilterSchemaFor(Client)) filter?: Filter,
   ): Promise<Client[]> {
@@ -73,7 +84,7 @@ export class ClientController {
     responses: {
       '200': {
         description: 'Client PATCH success count',
-        content: {'application/json': {schema: CountSchema}},
+        content: { 'application/json': { schema: CountSchema } },
       },
     },
   })
@@ -88,7 +99,7 @@ export class ClientController {
     responses: {
       '200': {
         description: 'Client model instance',
-        content: {'application/json': {schema: {'x-ts-type': Client}}},
+        content: { 'application/json': { schema: { 'x-ts-type': Client } } },
       },
     },
   })
